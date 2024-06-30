@@ -12,48 +12,48 @@ const images = [
   "/placeholders/8.svg",
   "/placeholders/9.svg",
   "/placeholders/10.svg",
-]
+];
 
 export const create = mutation({
   args: {
     orgId: v.string(),
-    title: v.string()
+    title: v.string(),
   },
   handler: async (ctx, args) => {
-    const identify = await ctx.auth.getUserIdentity()
+    const identify = await ctx.auth.getUserIdentity();
 
     if (!identify) {
-      throw new Error('Unauthorized')
+      throw new Error("Unauthorized");
     }
 
-    const randomImage = images[Math.floor(Math.random() * images.length)]
+    const randomImage = images[Math.floor(Math.random() * images.length)];
 
-    const board = await ctx.db.insert('boards', {
+    const board = await ctx.db.insert("boards", {
       title: args.title,
       orgId: args.orgId,
       authorId: identify.subject,
       authorName: identify.name!,
       imageUrl: randomImage,
-    })
+    });
 
-    return board
-  }
-})
+    return board;
+  },
+});
 
 export const remove = mutation({
   args: {
-    id: v.id("boards")
+    id: v.id("boards"),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
+    const identity = await ctx.auth.getUserIdentity();
 
     if (!identity) {
-      throw new Error('Unauthorized')
+      throw new Error("Unauthorized");
     }
 
-    await ctx.db.delete(args.id)
-  }
-})
+    await ctx.db.delete(args.id);
+  },
+});
 
 export const update = mutation({
   args: {
@@ -61,26 +61,103 @@ export const update = mutation({
     title: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
+    const identity = await ctx.auth.getUserIdentity();
 
     if (!identity) {
-      throw new Error('Unauthorized')
+      throw new Error("Unauthorized");
     }
-    
-    const title = args.title.trim()
+
+    const title = args.title.trim();
 
     if (!title) {
-      throw new Error('Title is required')
+      throw new Error("Title is required");
     }
 
     if (title.length > 60) {
-      throw new Error('Title is too long')
+      throw new Error("Title is too long");
     }
 
     const board = await ctx.db.patch(args.id, {
-      title: args.title
-    })
+      title: args.title,
+    });
 
-    return board
-  }
-})
+    return board;
+  },
+});
+
+export const favorite = mutation({
+  args: {
+    id: v.id("boards"),
+    orgId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    const board = await ctx.db.get(args.id);
+
+    if (!board) {
+      throw new Error("Board not found");
+    }
+
+    const userId = identity.subject;
+
+    const existingFavorite = await ctx.db
+      .query("userFavorites")
+      .withIndex("by_user_board_org", (q) =>
+        q.eq("userId", userId).eq("boardId", board._id).eq("orgId", args.orgId)
+      )
+      .unique();
+
+    if (existingFavorite) {
+      throw new Error("Board already favorited");
+    }
+
+    await ctx.db.insert("userFavorites", {
+      orgId: args.orgId,
+      userId,
+      boardId: board._id,
+    });
+
+    return board;
+  },
+});
+
+export const unfavorite = mutation({
+  args: {
+    id: v.id("boards"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    const board = await ctx.db.get(args.id);
+
+    if (!board) {
+      throw new Error("Board not found");
+    }
+
+    const userId = identity.subject;
+
+    const existingFavorite = await ctx.db
+      .query("userFavorites")
+      .withIndex("by_user_board", (q) =>
+        q.eq("userId", userId).eq("boardId", board._id)
+      )
+      .unique();
+
+    if (!existingFavorite) {
+      throw new Error("Favorite board not found");
+    }
+
+    await ctx.db.delete(existingFavorite._id);
+
+    return board;
+  },
+});

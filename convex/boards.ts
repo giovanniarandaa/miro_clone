@@ -3,21 +3,36 @@ import { mutation, query } from "./_generated/server";
 
 export const get = query({
   args: {
-    orgId: v.string()
+    orgId: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
+    const identity = await ctx.auth.getUserIdentity();
 
     if (!identity) {
-      throw new Error('Unauthorized')
+      throw new Error("Unauthorized");
     }
 
     const boards = await ctx.db
-      .query('boards')
-      .withIndex('by_org', (q) => q.eq('orgId', args.orgId))
-      .order('desc')
-      .collect()
+      .query("boards")
+      .withIndex("by_org", (q) => q.eq("orgId", args.orgId))
+      .order("desc")
+      .collect();
 
-    return boards
-  }
-})
+    const boardWithFavoriteRelation = boards.map((board) => {
+      return ctx.db
+        .query("userFavorites")
+        .withIndex("by_user_board", (q) =>
+          q.eq("userId", identity.subject).eq("boardId", board._id)
+        )
+        .unique()
+        .then((favorite) => ({
+          ...board,
+          isFavorite: !!favorite,
+        }));
+    });
+
+    const boardsWithFavoriteBoolean = await Promise.all(boardWithFavoriteRelation)
+
+    return boardsWithFavoriteBoolean;
+  },
+});
