@@ -8,15 +8,13 @@ interface RoomProps {
   fallback: NonNullable<ReactNode> | null;
 }
 
-const liveblock_api = process.env.NEXT_PUBLIC_LIVEBLOCK_API_KEY!
-
 export const Room = ({
   children,
   roomId,
   fallback
 }: RoomProps) => {
   return (
-    <LiveblocksProvider publicApiKey={liveblock_api}>
+    <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
       <RoomProvider id={roomId} initialPresence={{}}>
         <ClientSideSuspense fallback={fallback}>
           {() => children}
