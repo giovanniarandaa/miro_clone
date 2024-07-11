@@ -1,7 +1,7 @@
 import { cn, colorToCSS } from "@/lib/utils";
 import { TextLayer } from "@/types/canvas";
 import { useMutation } from "@liveblocks/react/suspense";
-import { Content, Kalam } from "next/font/google";
+import { Kalam } from "next/font/google";
 import ContentEditable, { ContentEditableEvent } from "react-contenteditable";
 
 const font = Kalam({
