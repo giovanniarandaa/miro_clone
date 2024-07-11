@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { getAllOrThrow } from "convex-helpers/server/relationships"
+import { Id } from "./_generated/dataModel";
 
 export const get = query({
   args: {
@@ -26,7 +27,7 @@ export const get = query({
         .order("desc")
         .collect();
       
-      const ids = favoriteBoards.map((favorite) => favorite.boardId);
+      const ids: Id<"boards">[] = favoriteBoards.map((favorite) => favorite.boardId as Id<"boards">);
 
       const boards = await getAllOrThrow(ctx.db, ids);
 
